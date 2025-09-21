@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            background-color: #111;
+            border: 1px solid #333;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Music Visualizer</h1>
+        <input type="file" id="audioFile" accept="audio/*">
+        <canvas id="visualizer" width="800" height="400"></canvas>
+        <audio id="audio" controls></audio>
+    </div>
+
+    <script>
+        const audioFileInput = document.getElementById('audioFile');
+        const audioElement = document.getElementById('audio');
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+
+        let audioContext, analyser, source, bufferLength, dataArray;
+
+        // Set up the audio context and analyser
+        function setupAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256; // Controls how many frequency bands we will have
+            bufferLength = analyser.frequencyBinCount; // This is half of fftSize
+            dataArray = new Uint8Array(bufferLength);
+
+            // Connect the audio element to the audio context
+            source = audioContext.createMediaElementSource(audioElement);
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+        }
+
+        // Create the visualizer animation
+        function drawVisualizer() {
+            requestAnimationFrame(drawVisualizer);
+
+            analyser.getByteFrequencyData(dataArray);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+
+            const barWidth = (canvas.width / bufferLength) * 2.5; // Set the width of each bar
+            let barHeight;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                barHeight = dataArray[i];
+
+                ctx.fillStyle = `rgb(${barHeight + 100}, 50, 50)`; // Set the bar color
+                ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+                x += barWidth + 1; // Spacing between bars
+            }
+        }
+
+        // File input listener to load the audio file
+        audioFileInput.addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                audioElement.src = e.target.result;
+                audioElement.play();
+                setupAudio();
+                drawVisualizer();
+            };
+
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>
